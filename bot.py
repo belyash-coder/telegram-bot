@@ -9,8 +9,10 @@ TOKEN = "8883241923:AAHwg34KsO8uhCToiIwJBCiX3bjNhxf3pr8"
 MINI_APP = "https://belyash-coder.github.io"
 
 # Храним историю сообщений для удаления
-# chat_id -> {"last_genre_msg": msg_id, "last_menu_msg": msg_id}
 msg_history = {}
+
+# Подписчики на ежедневную рассылку
+subscribers = set()
 
 # Загружаем жанры из вашего сайта
 GENRES = []
@@ -25,7 +27,29 @@ except:
 
 @app.route("/")
 def home():
-    return f"Бот работает! Загружено {len(GENRES)} жанров."
+    return f"Бот работает! Загружено {len(GENRES)} жанров. Подписчиков: {len(subscribers)}"
+
+@app.route("/daily", methods=["GET"])
+def send_daily_to_all():
+    today = datetime.date.today().toordinal()
+    genre = GENRES[today % len(GENRES)]
+    slug = ''.join(c for c in genre if c.isalnum()).lower()
+    spotify = f"https://open.spotify.com/search/{genre.replace(' ', '%20')}"
+    everynoise = f"https://everynoise.com/engenremap-{slug}.html"
+    
+    text = f"📅 *Жанр дня:* {genre}\n\n[🟢 Spotify]({spotify}) | [🔗 EveryNoise]({everynoise})"
+    
+    sent = 0
+    for uid in list(subscribers):
+        try:
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+                "chat_id": uid, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True
+            })
+            sent += 1
+        except:
+            pass
+    
+    return f"Отправлено {sent} подписчикам"
 
 def delete_message(chat_id, msg_id):
     if msg_id:
@@ -45,7 +69,6 @@ def webhook():
         text = data["message"].get("text", "")
         
         if text in ["/start", "/menu", "📋 Меню"]:
-            # Удаляем предыдущее сообщение с жанром если было
             if chat_id in msg_history:
                 delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
                 delete_message(chat_id, msg_history[chat_id].get("menu_msg"))
@@ -60,7 +83,8 @@ def webhook():
                         [{"text": "📅 Жанр дня", "callback_data": "daily"}],
                         [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
                         [{"text": "📚 Коллекция", "callback_data": "collection"},
-                         {"text": "ℹ️ О боте", "callback_data": "about"}]
+                         {"text": "ℹ️ О боте", "callback_data": "about"}],
+                        [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
                     ]
                 }
             }).json()
@@ -94,9 +118,8 @@ def webhook():
                 "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям\n• Last.fm + Spotify + EveryNoise",
                 "parse_mode": "Markdown"
             })
-
-                elif text in ["🔔 Подписаться", "/subscribe"]:
-            from cron import subscribers
+        
+        elif text in ["🔔 Подписаться", "/subscribe"]:
             subscribers.add(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
@@ -105,7 +128,6 @@ def webhook():
             })
         
         elif text in ["❌ Отписаться", "/unsubscribe"]:
-            from cron import subscribers
             subscribers.discard(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
@@ -120,7 +142,6 @@ def webhook():
         callback_data = data["callback_query"]["data"]
         
         if callback_data == "genre":
-            # Удаляем предыдущее сообщение с жанром
             if chat_id in msg_history:
                 delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
             send_genre(chat_id)
@@ -147,9 +168,8 @@ def webhook():
                 "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям",
                 "parse_mode": "Markdown"
             })
-
+        
         elif callback_data == "subscribe":
-            from cron import subscribers
             subscribers.add(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
@@ -158,7 +178,6 @@ def webhook():
             })
         
         elif callback_data == "unsubscribe":
-            from cron import subscribers
             subscribers.discard(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
@@ -167,7 +186,6 @@ def webhook():
             })
             
         elif callback_data == "menu":
-            # Удаляем ВСЕ предыдущие сообщения от бота
             if chat_id in msg_history:
                 delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
                 delete_message(chat_id, msg_history[chat_id].get("menu_msg"))
@@ -181,7 +199,7 @@ def webhook():
                         [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
                         [{"text": "📅 Жанр дня", "callback_data": "daily"}],
                         [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
-                                                [{"text": "📚 Коллекция", "callback_data": "collection"},
+                        [{"text": "📚 Коллекция", "callback_data": "collection"},
                          {"text": "ℹ️ О боте", "callback_data": "about"}],
                         [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
                     ]
