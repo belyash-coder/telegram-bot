@@ -94,6 +94,23 @@ def webhook():
                 "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям\n• Last.fm + Spotify + EveryNoise",
                 "parse_mode": "Markdown"
             })
+
+                elif text in ["🔔 Подписаться", "/subscribe"]:
+            from cron import subscribers
+            subscribers.add(chat_id)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": "✅ Ты подписан на ежедневную рассылку жанра дня!\n\nЖанр будет приходить каждый день в 12:00 МСК.",
+                "reply_markup": {"inline_keyboard": [[{"text": "❌ Отписаться", "callback_data": "unsubscribe"}]]}
+            })
+        
+        elif text in ["❌ Отписаться", "/unsubscribe"]:
+            from cron import subscribers
+            subscribers.discard(chat_id)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": "❌ Ты отписался от рассылки."
+            })
         
         else:
             send_genre(chat_id)
@@ -130,6 +147,24 @@ def webhook():
                 "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям",
                 "parse_mode": "Markdown"
             })
+
+        elif callback_data == "subscribe":
+            from cron import subscribers
+            subscribers.add(chat_id)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": "✅ Подписка оформлена! Жанр дня в 12:00 МСК.",
+                "reply_markup": {"inline_keyboard": [[{"text": "❌ Отписаться", "callback_data": "unsubscribe"}]]}
+            })
+        
+        elif callback_data == "unsubscribe":
+            from cron import subscribers
+            subscribers.discard(chat_id)
+            requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+                "chat_id": chat_id,
+                "text": "❌ Рассылка отключена.",
+                "reply_markup": {"inline_keyboard": [[{"text": "🔔 Подписаться", "callback_data": "subscribe"}]]}
+            })
             
         elif callback_data == "menu":
             # Удаляем ВСЕ предыдущие сообщения от бота
@@ -146,8 +181,9 @@ def webhook():
                         [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
                         [{"text": "📅 Жанр дня", "callback_data": "daily"}],
                         [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
-                        [{"text": "📚 Коллекция", "callback_data": "collection"},
-                         {"text": "ℹ️ О боте", "callback_data": "about"}]
+                                                [{"text": "📚 Коллекция", "callback_data": "collection"},
+                         {"text": "ℹ️ О боте", "callback_data": "about"}],
+                        [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
                     ]
                 }
             }).json()
