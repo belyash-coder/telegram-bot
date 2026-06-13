@@ -19,7 +19,7 @@ def webhook():
         text = data["message"].get("text", "")
         
         if text == "/start":
-            send_message(chat_id, "🎵 Привет! Жми кнопку 👇", [[{"text": "🎰 Открыть рулетку", "url": MINI_APP}]])
+                        send_message(chat_id, "🎵 Привет! Жми кнопку 👇", [[{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}]])
         else:
             send_message(chat_id, "Напиши /start")
     return "ok"
