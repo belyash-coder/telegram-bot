@@ -14,20 +14,12 @@ subscribers = set()
 GENRES = []
 try:
     resp = requests.get("https://belyash-coder.github.io", timeout=10)
-         start = resp.text.find("const everynoise = `") + 20
+    start = resp.text.find("const everynoise = `") + 20
     end = resp.text.find("`;", start)
     raw = resp.text[start:end]
-    lines = [g.strip() for g in raw.split('\n') if g.strip() and len(g.strip()) > 1]
-    # Фильтруем CSS-мусор
-    GENRES = []
-    for line in lines:
-        if len(line) > 60:
-            continue
-        if line[0] in '.#@{':
-            continue
-        if ':' in line or ';' in line:
-            continue
-        GENRES.append(line)except:
+    all_lines = [g.strip() for g in raw.split('\n') if g.strip()]
+    GENRES = [g for g in all_lines if len(g) > 1 and len(g) < 60 and '{' not in g and '}' not in g and ':' not in g]
+except:
     GENRES = ["pop", "rock", "jazz", "blues", "hip hop", "metal", "punk", "folk", "disco", "house"]
 
 @app.route("/")
