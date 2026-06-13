@@ -14,10 +14,10 @@ subscribers = set()
 GENRES = []
 try:
     resp = requests.get("https://belyash-coder.github.io", timeout=10)
-    start = resp.text.find("const everynoise = `") + 20
+        start = resp.text.find("const everynoise = `") + 20
     end = resp.text.find("`;", start)
     raw = resp.text[start:end]
-    GENRES = [g.strip() for g in raw.split('\n') if g.strip() and len(g.strip()) > 1]
+    GENRES = [g.strip() for g in raw.split('\n') if g.strip() and len(g.strip()) > 1 and len(g.strip()) < 60 and not g.strip().startswith('.') and not g.strip().startswith('#') and not g.strip().startswith('@') and not g.strip().startswith('{') and ':' not in g.strip() and ';' not in g.strip()]
 except:
     GENRES = ["pop", "rock", "jazz", "blues", "hip hop", "metal", "punk", "folk", "disco", "house"]
 
