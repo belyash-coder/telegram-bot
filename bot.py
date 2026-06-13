@@ -8,13 +8,9 @@ app = Flask(__name__)
 TOKEN = "8883241923:AAHwg34KsO8uhCToiIwJBCiX3bjNhxf3pr8"
 MINI_APP = "https://belyash-coder.github.io"
 
-# Храним историю сообщений для удаления
 msg_history = {}
-
-# Подписчики на ежедневную рассылку
 subscribers = set()
 
-# Загружаем жанры из вашего сайта
 GENRES = []
 try:
     resp = requests.get("https://belyash-coder.github.io", timeout=10)
@@ -36,9 +32,7 @@ def send_daily_to_all():
     slug = ''.join(c for c in genre if c.isalnum()).lower()
     spotify = f"https://open.spotify.com/search/{genre.replace(' ', '%20')}"
     everynoise = f"https://everynoise.com/engenremap-{slug}.html"
-    
     text = f"📅 *Жанр дня:* {genre}\n\n[🟢 Spotify]({spotify}) | [🔗 EveryNoise]({everynoise})"
-    
     sent = 0
     for uid in list(subscribers):
         try:
@@ -48,7 +42,6 @@ def send_daily_to_all():
             sent += 1
         except:
             pass
-    
     return f"Отправлено {sent} подписчикам"
 
 def delete_message(chat_id, msg_id):
@@ -60,6 +53,33 @@ def delete_message(chat_id, msg_id):
         except:
             pass
 
+def clear_chat(chat_id):
+    """Удаляет все сохранённые сообщения бота в чате"""
+    if chat_id in msg_history:
+        for key in list(msg_history[chat_id].keys()):
+            delete_message(chat_id, msg_history[chat_id][key])
+        msg_history[chat_id] = {}
+
+def send_menu(chat_id):
+    clear_chat(chat_id)
+    resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
+        "chat_id": chat_id,
+        "text": "🎵 *Главное меню*\n\nВыбери действие:",
+        "parse_mode": "Markdown",
+        "reply_markup": {
+            "inline_keyboard": [
+                [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
+                [{"text": "📅 Жанр дня", "callback_data": "daily"}],
+                [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
+                [{"text": "📚 Коллекция", "callback_data": "collection"},
+                 {"text": "ℹ️ О боте", "callback_data": "about"}],
+                [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
+            ]
+        }
+    }).json()
+    if resp.get("ok"):
+        msg_history[chat_id] = {"menu_msg": resp["result"]["message_id"]}
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
@@ -68,30 +88,8 @@ def webhook():
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
         
-        if chat_id in msg_history:
-                for key in list(msg_history[chat_id].keys()):
-                    delete_message(chat_id, msg_history[chat_id][key])
-                msg_history[chat_id] = {}
-            
-            resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
-                "chat_id": chat_id,
-                "text": "🎵 *Главное меню*\n\nВыбери действие:",
-                "parse_mode": "Markdown",
-                "reply_markup": {
-                    "inline_keyboard": [
-                        [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
-                        [{"text": "📅 Жанр дня", "callback_data": "daily"}],
-                        [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
-                        [{"text": "📚 Коллекция", "callback_data": "collection"},
-                         {"text": "ℹ️ О боте", "callback_data": "about"}],
-                        [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
-                    ]
-                }
-            }).json()
-            
-            if resp.get("ok"):
-                msg_history[chat_id] = msg_history.get(chat_id, {})
-                msg_history[chat_id]["menu_msg"] = resp["result"]["message_id"]
+        if text in ["/start", "/menu", "📋 Меню"]:
+            send_menu(chat_id)
         
         elif text in ["🎲 Случайный жанр", "/genre"]:
             send_genre(chat_id)
@@ -142,8 +140,7 @@ def webhook():
         callback_data = data["callback_query"]["data"]
         
         if callback_data == "genre":
-            if chat_id in msg_history:
-                delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
+            delete_message(chat_id, msg_history.get(chat_id, {}).get("genre_msg"))
             send_genre(chat_id)
             
         elif callback_data == "daily":
@@ -186,31 +183,7 @@ def webhook():
             })
             
         elif callback_data == "menu":
-            # Удаляем все предыдущие сообщения от бота
-            if chat_id in msg_history:
-                for key in list(msg_history[chat_id].keys()):
-                    delete_message(chat_id, msg_history[chat_id][key])
-                msg_history[chat_id] = {}
-            
-            resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
-                "chat_id": chat_id,
-                "text": "🎵 *Главное меню*\n\nВыбери действие:",
-                "parse_mode": "Markdown",
-                "reply_markup": {
-                    "inline_keyboard": [
-                        [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
-                        [{"text": "📅 Жанр дня", "callback_data": "daily"}],
-                        [{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}],
-                        [{"text": "📚 Коллекция", "callback_data": "collection"},
-                         {"text": "ℹ️ О боте", "callback_data": "about"}],
-                        [{"text": "🔔 Подписаться на жанр дня", "callback_data": "subscribe"}]
-                    ]
-                }
-            }).json()
-            
-            if resp.get("ok"):
-                msg_history[chat_id] = msg_history.get(chat_id, {})
-                msg_history[chat_id]["menu_msg"] = resp["result"]["message_id"]
+            send_menu(chat_id)
         
         requests.post(f"https://api.telegram.org/bot{TOKEN}/answerCallbackQuery", json={
             "callback_query_id": data["callback_query"]["id"]
