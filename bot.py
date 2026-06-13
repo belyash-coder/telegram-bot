@@ -21,6 +21,22 @@ try:
 except:
     GENRES = ["pop", "rock", "jazz", "blues", "hip hop", "metal", "punk", "folk", "disco", "house"]
 
+# Случайные подписи под жанры
+GENRE_TAGS = [
+    "🎵 Открой для себя новое звучание",
+    "🔥 Горячий жанр этого момента",
+    "🎧 То, что нужно твоим ушам",
+    "💎 Скрытая жемчужина",
+    "🚀 Взлетающий тренд",
+    "🎸 Классика на все времена",
+    "🪩 Для танцев до утра",
+    "🌙 Идеально для вечера",
+    "☕ Под утренний кофе",
+    "🏆 Выбор редакции",
+    "🎹 Для глубокого погружения",
+    "🌈 Расширь свой музыкальный кругозор",
+]
+
 @app.route("/")
 def home():
     return f"Бот работает! Загружено {len(GENRES)} жанров. Подписчиков: {len(subscribers)}"
@@ -32,12 +48,15 @@ def send_daily_to_all():
     slug = ''.join(c for c in genre if c.isalnum()).lower()
     spotify = f"https://open.spotify.com/search/{genre.replace(' ', '%20')}"
     everynoise = f"https://everynoise.com/engenremap-{slug}.html"
-    text = f"📅 *Жанр дня:* {genre}\n\n[🟢 Spotify]({spotify}) | [🔗 EveryNoise]({everynoise})"
+    tag = random.choice(GENRE_TAGS)
+    
+    text = f"📅 <b>Жанр дня:</b> <b>{genre}</b>\n\n<i>{tag}</i>\n\n<a href='{spotify}'>🟢 Spotify</a> | <a href='{everynoise}'>🔗 EveryNoise</a>"
+    
     sent = 0
     for uid in list(subscribers):
         try:
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
-                "chat_id": uid, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True
+                "chat_id": uid, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True
             })
             sent += 1
         except:
@@ -54,7 +73,6 @@ def delete_message(chat_id, msg_id):
             pass
 
 def clear_chat(chat_id):
-    """Удаляет все сохранённые сообщения бота в чате"""
     if chat_id in msg_history:
         for key in list(msg_history[chat_id].keys()):
             delete_message(chat_id, msg_history[chat_id][key])
@@ -64,8 +82,8 @@ def send_menu(chat_id):
     clear_chat(chat_id)
     resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
         "chat_id": chat_id,
-        "text": "🎵 *Главное меню*\n\nВыбери действие:",
-        "parse_mode": "Markdown",
+        "text": "🎵 <b>Главное меню</b>\n\nВыбери действие:",
+        "parse_mode": "HTML",
         "reply_markup": {
             "inline_keyboard": [
                 [{"text": "🎲 Случайный жанр", "callback_data": "genre"}],
@@ -99,29 +117,31 @@ def webhook():
             genre = GENRES[today % len(GENRES)]
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": f"📅 *Жанр дня:* {genre}\n\n[🟢 Spotify](https://open.spotify.com/search/{genre.replace(' ', '%20')})",
-                "parse_mode": "Markdown", "disable_web_page_preview": True
+                "text": f"📅 <b>Жанр дня:</b> {genre}\n\n<a href='https://open.spotify.com/search/{genre.replace(' ', '%20')}'>🟢 Spotify</a>",
+                "parse_mode": "HTML", "disable_web_page_preview": True
             })
         
         elif text in ["📚 Коллекция", "/collection"]:
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "📚 Коллекция доступна в Mini App!",
+                "text": "📚 <b>Коллекция доступна в Mini App!</b>\n\nОткрой приложение и нажми на 📚 в правом верхнем углу.",
+                "parse_mode": "HTML",
                 "reply_markup": {"inline_keyboard": [[{"text": "🎰 Открыть рулетку", "web_app": {"url": MINI_APP}}]]}
             })
         
         elif text in ["ℹ️ О боте", "/about"]:
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям\n• Last.fm + Spotify + EveryNoise",
-                "parse_mode": "Markdown"
+                "text": "🎵 <b>Случайный музыкальный жанр</b>\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям\n• Коллекция жанров\n• Last.fm + Spotify + EveryNoise\n\n<i>Создано для исследования музыки 🎧</i>",
+                "parse_mode": "HTML"
             })
         
         elif text in ["🔔 Подписаться", "/subscribe"]:
             subscribers.add(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "✅ Ты подписан на ежедневную рассылку жанра дня!\n\nЖанр будет приходить каждый день в 12:00 МСК.",
+                "text": "✅ <b>Ты подписан!</b>\n\nЖанр дня будет приходить каждый день в <b>12:00 МСК</b>.",
+                "parse_mode": "HTML",
                 "reply_markup": {"inline_keyboard": [[{"text": "❌ Отписаться", "callback_data": "unsubscribe"}]]}
             })
         
@@ -148,29 +168,31 @@ def webhook():
             genre = GENRES[today % len(GENRES)]
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": f"📅 *Жанр дня:* {genre}\n\n[🟢 Spotify](https://open.spotify.com/search/{genre.replace(' ', '%20')})",
-                "parse_mode": "Markdown", "disable_web_page_preview": True
+                "text": f"📅 <b>Жанр дня:</b> {genre}\n\n<a href='https://open.spotify.com/search/{genre.replace(' ', '%20')}'>🟢 Spotify</a>",
+                "parse_mode": "HTML", "disable_web_page_preview": True
             })
             
         elif callback_data == "collection":
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "📚 Коллекция в Mini App!",
+                "text": "📚 <b>Коллекция в Mini App!</b>",
+                "parse_mode": "HTML",
                 "reply_markup": {"inline_keyboard": [[{"text": "🎰 Открыть", "web_app": {"url": MINI_APP}}]]}
             })
             
         elif callback_data == "about":
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "🎵 *Случайный музыкальный жанр*\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям",
-                "parse_mode": "Markdown"
+                "text": "🎵 <b>Случайный музыкальный жанр</b>\n\n• Более 5000 жанров\n• Рулетка с анимацией\n• Фильтры по категориям\n• Last.fm + Spotify + EveryNoise\n\n<i>Создано для исследования музыки 🎧</i>",
+                "parse_mode": "HTML"
             })
         
         elif callback_data == "subscribe":
             subscribers.add(chat_id)
             requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
-                "text": "✅ Подписка оформлена! Жанр дня в 12:00 МСК.",
+                "text": "✅ <b>Подписка оформлена!</b> Жанр дня в 12:00 МСК.",
+                "parse_mode": "HTML",
                 "reply_markup": {"inline_keyboard": [[{"text": "❌ Отписаться", "callback_data": "unsubscribe"}]]}
             })
         
@@ -197,11 +219,12 @@ def send_genre(chat_id):
     spotify = f"https://open.spotify.com/search/{genre.replace(' ', '%20')}"
     everynoise = f"https://everynoise.com/engenremap-{slug}.html"
     lastfm = f"https://www.last.fm/tag/{genre.replace(' ', '%20')}"
+    tag = random.choice(GENRE_TAGS)
     
     resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
         "chat_id": chat_id,
-        "text": f"🎲 *{genre}*\n\n[🔴 Last.fm]({lastfm}) | [🟢 Spotify]({spotify}) | [🔗 EveryNoise]({everynoise})",
-        "parse_mode": "Markdown",
+        "text": f"🎲 <b>{genre}</b>\n\n<i>{tag}</i>\n\n<a href='{lastfm}'>🔴 Last.fm</a>  <a href='{spotify}'>🟢 Spotify</a>  <a href='{everynoise}'>🔗 EveryNoise</a>",
+        "parse_mode": "HTML",
         "disable_web_page_preview": True,
         "reply_markup": {
             "inline_keyboard": [
