@@ -68,10 +68,10 @@ def webhook():
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
         
-        if text in ["/start", "/menu", "📋 Меню"]:
-            if chat_id in msg_history:
-                delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
-                delete_message(chat_id, msg_history[chat_id].get("menu_msg"))
+        if chat_id in msg_history:
+                for key in list(msg_history[chat_id].keys()):
+                    delete_message(chat_id, msg_history[chat_id][key])
+                msg_history[chat_id] = {}
             
             resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
@@ -186,9 +186,11 @@ def webhook():
             })
             
         elif callback_data == "menu":
+            # Удаляем все предыдущие сообщения от бота
             if chat_id in msg_history:
-                delete_message(chat_id, msg_history[chat_id].get("genre_msg"))
-                delete_message(chat_id, msg_history[chat_id].get("menu_msg"))
+                for key in list(msg_history[chat_id].keys()):
+                    delete_message(chat_id, msg_history[chat_id][key])
+                msg_history[chat_id] = {}
             
             resp = requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
                 "chat_id": chat_id,
