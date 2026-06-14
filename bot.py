@@ -45,7 +45,7 @@ def send_daily_to_all():
             sent += 1
         except:
             pass
-    return f"Отправлено {sent} подписчикам"
+    return "OK"
 
 def delete_message(chat_id, msg_id):
     if msg_id:
